@@ -1,0 +1,5 @@
+# 자동생성
+logs/*
+test/*
+__pycache__/*
+*.xlsx
