@@ -1,4 +1,5 @@
-# 금융법령해석 웹크롤러
+# FRCrawler (FinReg Crawler)
+금융법령해석 웹크롤러
 
 ## v0.0.3 DD 250325
 
