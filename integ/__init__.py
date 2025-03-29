@@ -1,8 +1,14 @@
 """
-통합회신사례 크롤링 패키지
+통합회신사례 크롤러 패키지
 """
+from .models import ListItem, DetailItem, CombinedItem
+from .list_crawler import ListCrawler
+from .detail.factory import DetailCrawlerFactory
 
-from integ.models import ListItem, DetailItem, CombinedItem
-from integ.crawler import IntegrationCrawler
-
-__all__ = ['ListItem', 'DetailItem', 'CombinedItem', 'IntegrationCrawler']
+__all__ = [
+    'ListItem',
+    'DetailItem', 
+    'CombinedItem',
+    'ListCrawler',
+    'DetailCrawlerFactory'
+]

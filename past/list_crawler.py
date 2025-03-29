@@ -1,12 +1,20 @@
 """
 과거 회신사례(2014년 이전) 목록 크롤링 클래스
 """
-
+import os
+import sys
 import requests
 import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import json
+
+
+# 상위 디렉토리를 import path에 추가
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 
 from past.models import ListItem
 from past.config import LIST_URL, DEFAULT_HEADERS
@@ -86,11 +94,10 @@ class ListCrawler:
                 list_item = ListItem(
                     rownumber=item.get("rownumber", 0),
                     pastreqIdx=item.get("pastreqIdx", 0),
-                    title=item.get("title", ""),
-                    regDate=item.get("regDate", ""),
-                    reqPart=item.get("reqPart", None),
-                    reqPartSub=item.get("reqPartSub", None),
-                    accNum=item.get("accNum", None)
+                    pastreqType=item.get("pastreqType", ""), # 유형
+                    pastreqSubject=item.get("pastreqSubject", ""), # 제목
+                    serialNum=item.get("serialNum", None),
+                    regDate=item.get("regDate", "")
                 )
                 all_items.append(list_item)
                 
@@ -116,3 +123,12 @@ class ListCrawler:
         """
         list_items = self.get_list_items(start_date, end_date)
         return pd.DataFrame([vars(item) for item in list_items])
+    
+if __name__ == "__main__":
+    # 테스트용 코드
+    crawler = ListCrawler(batch_size=1000)
+    # items = crawler.get_list_items(start_date="2000-01-01", end_date="2025-03-31")
+    df:pd.DataFrame = crawler.get_list_dataframe(start_date="2000-01-01", end_date="2025-03-31")
+    import pandasgui as pg
+    pg.show(df)
+    

@@ -14,7 +14,7 @@ def get_detail_html(idx_value, gubun_value):
     actCd = "R"
 
     # gubun이 '법령해석'이면 LawreqDetail, 그 외면 OpinionDetail
-    if gubun_value == "법령해석":
+    if gubun_value == "1":
         url = "https://better.fsc.go.kr/fsc_new/replyCase/LawreqDetail.do"
         data = {
             "muNo": muNo,
@@ -22,7 +22,7 @@ def get_detail_html(idx_value, gubun_value):
             "lawreqIdx": idx_value,
             "actCd": actCd
         }
-    elif gubun_value == "비조치의견서":
+    elif gubun_value == "2":
         url = "https://better.fsc.go.kr/fsc_new/replyCase/OpinionDetail.do"
         data = {
             "muNo": muNo,
@@ -30,7 +30,7 @@ def get_detail_html(idx_value, gubun_value):
             "opinionIdx": idx_value,
             "actCd": actCd
         }
-    elif gubun_value == "현장건의과제":
+    elif gubun_value == "3":
         url = "https://better.fsc.go.kr/fsc_new/ExmntTaskDetail.do"
         data = {
             "muNo": muNo,
@@ -39,6 +39,16 @@ def get_detail_html(idx_value, gubun_value):
             "checkplaceSetIdx": "2",
             "actCd": actCd
         }        
+
+    elif gubun_value == "4":
+        url = "https://better.fsc.go.kr/fsc_new/replyCase/PastReqDetail.do"
+        # goUrl(url, {muNo:$("#muNo").val(), stNo:$("#stNo").val(), pastreqIdx: idx, actCd: 'R'});
+        data = {
+            "muNo": muNo,
+            "stNo": stNo,
+            "pastreqIdx": idx_value,
+            "actCd": actCd
+        }              
         # goUrl(url, {muNo:$("#muNo").val(), stNo:$("#stNo").val(), checkplaceNo: idx, checkplaceSetIdx:"2", actCd: 'R'});
 
     headers = {
@@ -65,8 +75,8 @@ if __name__ == "__main__":
     # idx_test = 2253
     # gubun_test = "비조치의견서"
 
-    idx_test = 1437784
-    gubun_test = "현장건의과제"
+    idx_test = 1889
+    gubun_test = "4"
 
     html_content = get_detail_html(idx_test, gubun_test)
     print(html_content)  # HTML 문자열 출력

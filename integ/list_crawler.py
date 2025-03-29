@@ -1,139 +1,153 @@
 """
-통합회신사례 목록 크롤링 클래스
+통합회신사례 목록 크롤러
 """
+import logging
+from datetime import datetime
+from typing import List, Optional
+import os
+import sys
+import pandas as pd
+
+# 상위 디렉토리를 import path에 추가
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
 import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-from typing import Optional, List, Dict, Any
-from datetime import datetime
-
+from integ.config import LIST_URL, DEFAULT_HEADERS  # 상대경로를 절대경로로 변경
 from integ.models import ListItem
-from integ.config import LIST_URL, DEFAULT_HEADERS
-from integ.utils import random_sleep
+from integ.utils import safe_get
+
+logger = logging.getLogger(__name__)
 
 class ListCrawler:
-    """금융위원회 통합회신사례 목록 크롤러"""
+    """목록 페이지 크롤러"""
     
-    def __init__(self, batch_size: int = 1000, max_items: Optional[int] = None):
+    def __init__(self, batch_size: int = 1000):
         """
         Args:
-            batch_size: 한 번에 요청할 항목 수
-            max_items: 최대 크롤링할 항목 수
+            batch_size: 한 번에 요청할 목록 항목 수
         """
         self.batch_size = batch_size
-        self.max_items = max_items
-        self.headers = DEFAULT_HEADERS.copy()
+        self.session = requests.Session()
+        self.session.headers.update(DEFAULT_HEADERS)
     
-    def get_list_items(self, start_date: str = "2000-01-01", end_date: Optional[str] = None) -> List[ListItem]:
+    def crawl(self, start_date: str, end_date: Optional[str] = None) -> List[ListItem]:
         """
-        목록 아이템을 크롤링하여 반환
+        목록 크롤링 실행
         
         Args:
-            start_date: 시작일 (YYYY-MM-DD)
-            end_date: 종료일 (YYYY-MM-DD), None이면 오늘 날짜
+            start_date: 조회 시작일 (YYYY-MM-DD)
+            end_date: 조회 종료일 (YYYY-MM-DD, None이면 오늘)
             
         Returns:
-            목록 아이템 리스트
+            ListItem 객체 리스트
         """
-        if end_date is None:
-            end_date = datetime.now().strftime("%Y-%m-%d")
+        # 날짜 형식 변환
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        if end_date:
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        else:
+            end_dt = datetime.now()
             
-        all_items = []
-        start_pos = 0
-        total_count = None
+        start_date_fmt = start_dt.strftime('%Y.%m.%d')
+        end_date_fmt = end_dt.strftime('%Y.%m.%d')
         
-        print(f"목록 크롤링 시작: {start_date} ~ {end_date}")
+        logger.info(f"목록 크롤링 시작: {start_date_fmt} ~ {end_date_fmt}")
+        
+        items = []
+        page = 1
         
         while True:
-            # 최대 아이템 수 제한 확인
-            if self.max_items and start_pos >= self.max_items:
-                break
-                
-            # 배치 크기 조정 (max_items가 지정된 경우)
-            current_batch_size = self.batch_size
-            if self.max_items and start_pos + current_batch_size > self.max_items:
-                current_batch_size = self.max_items - start_pos
-                
-            # API 요청 데이터
-            data = {
+            logger.info(f"페이지 {page} 요청 중...")
+            
+            # DataTables 요청 파라미터
+            params = {
                 "draw": 1,
-                "start": start_pos,
-                "length": current_batch_size,
-                "searchReplyRegDateStart": start_date,
-                "searchReplyRegDateEnd": end_date
+                "columns[0][data]": "rownumber",
+                "columns[0][searchable]": "true",
+                "columns[0][orderable]": "false",
+                "columns[1][data]": "pastreqType",
+                "columns[1][searchable]": "true",
+                "columns[1][orderable]": "false",
+                "columns[2][data]": "title",
+                "columns[2][searchable]": "true",
+                "columns[2][orderable]": "false",
+                "columns[3][data]": "replyRegDate",
+                "columns[3][searchable]": "true",
+                "columns[3][orderable]": "false",
+                "order[0][column]": 0,
+                "order[0][dir]": "asc",
+                "start": (page - 1) * self.batch_size,
+                "length": self.batch_size,
+                "search[value]": "",
+                "searchKeyword": "",
+                "searchCondition": "",
+                "searchType": ""
             }
             
-            # DataTables 필수 파라미터 추가
-            self._add_datatables_params(data)
-            
-            response = requests.post(LIST_URL, headers=self.headers, data=data)
-            json_data = response.json()
-            
-            # 처음 요청시 전체 아이템 수 가져오기
-            if total_count is None:
-                total_count = json_data.get("recordsTotal", 0)
-                print(f"전체 항목 수: {total_count}")
+            try:
+                response = self.session.post(LIST_URL, data=params)  # POST 요청 유지
+                response.raise_for_status()
                 
-                if self.max_items:
-                    print(f"최대 크롤링 항목 수: {self.max_items}")
-                    total_count = min(total_count, self.max_items)
-            
-            # 목록 아이템 추출
-            batch_items = json_data.get("data", [])
-            
-            for item in batch_items:
-                list_item = ListItem(
-                    rownumber=item.get("rownumber", 0),
-                    idx=item.get("idx", 0),
-                    gubun=item.get("gubun", ""),
-                    category=item.get("category", None),
-                    title=item.get("title", ""),
-                    regDate=item.get("regDate", ""),
-                    number=item.get("number", "")
-                )
-                all_items.append(list_item)
+                data = response.json()
+                list_data = data.get('data', [])  # 'list' 대신 'data' 키 사용
                 
-            # 진행 상황 출력
-            print(f"목록 진행: {start_pos + len(batch_items)}/{total_count} 항목 크롤링 완료")
-            
-            # 다음 배치로 이동
-            start_pos += current_batch_size
-            
-            # 전체 항목 수에 도달하면 종료
-            if start_pos >= total_count:
+                if not list_data:
+                    break
+                    
+                # ListItem 객체로 변환
+                for item in list_data:
+                    items.append(ListItem(
+                        dataIdx=int(safe_get(item, 'dataIdx', default=0)),  # 필드명 수정
+                        pastreqType=safe_get(item, 'pastreqType', default=''),  # 필드명 수정
+                        title=safe_get(item, 'title', default=''),
+                        replyRegDate=safe_get(item, 'replyRegDate', default='')  # 필드명 수정
+                    ))
+                
+                # 마지막 페이지 체크
+                total_records = int(data.get('recordsTotal', 0))
+                if (page - 1) * self.batch_size + len(list_data) >= total_records:
+                    break
+                    
+                page += 1
+                
+            except Exception as e:
+                logger.error(f"목록 페이지 {page} 요청 실패: {str(e)}")
+                logger.error(f"Response content: {response.text if 'response' in locals() else 'No response'}")
                 break
-                
-            # 요청 간 지연
-            random_sleep()
-            
-        print(f"목록 크롤링 완료: 총 {len(all_items)}개 항목")
-        return all_items
+        
+        logger.info(f"총 {len(items)}개의 항목을 찾았습니다.")
+        return items
+
+if __name__ == "__main__":
+    # 로깅 설정
+    logging.basicConfig(level=logging.INFO)
     
-    def _add_datatables_params(self, data: Dict[str, Any]):
-        """DataTables에 필요한 파라미터 추가"""
-        # columns 파라미터
-        columns = [
-            {"data": "rownumber", "name": "", "searchable": "true", "orderable": "false"},
-            {"data": "pastreqType", "name": "", "searchable": "true", "orderable": "false"},
-            {"data": "title", "name": "", "searchable": "true", "orderable": "false"},
-            {"data": "replyRegDate", "name": "", "searchable": "true", "orderable": "false"}
-        ]
+    # ListCrawler 인스턴스 생성
+    crawler = ListCrawler(batch_size=1000)  # 테스트를 위해 작은 batch_size 사용
+    
+    # 테스트용 날짜 범위 설정 (최근 1개월)
+    from datetime import datetime, timedelta
+    end_date = datetime.now().strftime('%Y-%m-%d')
+    start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    
+    print(f"테스트 기간: {start_date} ~ {end_date}")
+    
+    # 크롤링 실행
+    try:
+        items = crawler.crawl(start_date=start_date, end_date=end_date)
         
-        for i, col in enumerate(columns):
-            for key, value in col.items():
-                data[f"columns[{i}][{key}]"] = value
-                if key == "search":
-                    data[f"columns[{i}][search][value]"] = ""
-                    data[f"columns[{i}][search][regex]"] = "false"
-        
-        # order 파라미터
-        data["order[0][column]"] = 0
-        data["order[0][dir]"] = "asc"
-        
-        # 검색 파라미터
-        data["search[value]"] = ""
-        data["search[regex]"] = "false"
-        data["searchKeyword"] = ""
-        data["searchCondition"] = ""
-        data["searchType"] = ""
+        # 결과 출력
+        print("\n=== 크롤링 결과 ===")
+        print(f"총 {len(items)}개 항목 수집")
+        print("\n처음 5개 항목:")
+        for item in items[:5]:
+            print(f"- [{item.replyRegDate}] {item.title} ({item.pastreqType})")
+
+        # DataFrame으로 변환하여 pickle로 저장
+        df = pd.DataFrame([item.__dict__ for item in items])
+        df.to_pickle('list_items.pkl')    
+            
+    except Exception as e:
+        print(f"테스트 중 오류 발생: {str(e)}")

@@ -1,98 +1,90 @@
 """
-유틸리티 함수 모듈
+통합회신사례 크롤링 유틸리티 함수
 """
-
-import re
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
-import random
+from typing import Optional, Dict, Any
 
-def html_to_text_preserve_p_br(html_snippet):
+def get_td_html_after_th(soup: BeautifulSoup, th_text: str) -> Optional[str]:
     """
-    HTML을 텍스트로 변환하되 단락과 줄바꿈을 보존
-    
-    Args:
-        html_snippet: HTML 문자열
-        
-    Returns:
-        변환된 텍스트
-    """
-    try:
-        soup = BeautifulSoup(html_snippet, 'html.parser')
-        
-        # 줄바꿈 태그를 줄바꿈 문자로 대체
-        for br in soup.find_all('br'):
-            br.replace_with('\n')
-        
-        # 단락 태그 처리
-        for p in soup.find_all('p'):
-            p_text = p.get_text()
-            p.replace_with(f"{p_text}\n\n")
-        
-        # 다른 태그들은 공백으로 대체하면서 텍스트 추출
-        text = soup.get_text()
-        
-        # 연속된 줄바꿈 정리
-        text = re.sub(r'\n{3,}', '\n\n', text)
-        
-        return text.strip()
-    except Exception as e:
-        # 오류 발생 시 원본 HTML에서 가능한 많은 텍스트 추출 시도
-        try:
-            # 간단한 태그 제거 시도
-            return re.sub(r'<[^>]*>', ' ', html_snippet).strip()
-        except:
-            # 완전히 실패한 경우
-            return "[HTML 변환 오류]"
-
-def random_sleep(min_seconds=1, max_seconds=3):
-    """
-    랜덤 시간만큼 대기 (서버 부하 방지)
-    
-    Args:
-        min_seconds: 최소 대기 시간(초)
-        max_seconds: 최대 대기 시간(초)
-    """
-    delay = random.uniform(min_seconds, max_seconds)
-    time.sleep(delay)
-
-def get_td_html_after_th(soup, th_text):
-    """
-    특정 th 텍스트를 가진 요소 다음의 td 요소의 HTML 반환
+    테이블에서 특정 th 텍스트 다음에 오는 td의 HTML을 반환
     
     Args:
         soup: BeautifulSoup 객체
         th_text: 찾을 th 텍스트
+    
+    Returns:
+        td의 HTML 문자열 또는 None
+    """
+    th = soup.find('th', string=lambda x: x and th_text in x)
+    if th and th.find_next('td'):
+        return str(th.find_next('td'))
+    return None
+
+def html_to_text_preserve_p_br(html: Optional[str]) -> Optional[str]:
+    """
+    HTML을 텍스트로 변환하되 <p>와 <br> 태그는 개행으로 처리
+    
+    Args:
+        html: HTML 문자열
         
     Returns:
-        td 요소의 HTML 문자열, 찾지 못한 경우 None
+        변환된 텍스트 또는 None
     """
-    # 정확한 텍스트 매칭
-    th_tag = soup.find("th", string=lambda x: x and x.strip() == th_text)
-    if th_tag:
-        td_tag = th_tag.find_next("td")
-        if td_tag:
-            return str(td_tag)
-    
-    # 부분 텍스트 매칭
-    th_tag = soup.find("th", string=lambda x: x and th_text in x.strip())
-    if th_tag:
-        td_tag = th_tag.find_next("td")
-        if td_tag:
-            return str(td_tag)
-    
-    # 클래스 기반 검색
-    for class_name in ["", "bc-blue", "bc-yellow"]:
-        attrs = {"scope": "row"}
-        if class_name:
-            attrs["class"] = class_name
+    if not html:
+        return None
         
-        th_tags = soup.find_all("th", attrs=attrs)
-        for th in th_tags:
-            if th.text.strip() == th_text:
-                td_tag = th.find_next("td")
-                if td_tag:
-                    return str(td_tag)
+    soup = BeautifulSoup(html, 'html.parser')
     
-    return None
+    # <br>, <p> 태그를 개행문자로 변경
+    for tag in soup.find_all(['br', 'p']):
+        tag.replace_with('\n' + tag.get_text())
+    
+    # 텍스트 정리
+    text = soup.get_text()
+    text = '\n'.join(line.strip() for line in text.split('\n') if line.strip())
+    
+    return text if text else None
+
+def safe_get(data: Dict[str, Any], *keys: str, default: Any = None) -> Any:
+    """
+    중첩된 딕셔너리에서 안전하게 값을 가져오는 함수
+    
+    Args:
+        data: 딕셔너리
+        keys: 순차적으로 접근할 키들
+        default: 값이 없을 경우 반환할 기본값
+    """
+    for key in keys:
+        if isinstance(data, dict) and key in data:
+            data = data[key]
+        else:
+            return default
+    return data
+
+def save_dataframe(df: pd.DataFrame, output_file: str):
+    """
+    DataFrame을 파일로 저장
+    
+    Args:
+        df: 저장할 DataFrame
+        output_file: 저장할 파일 경로 (.csv 또는 .xlsx)
+    """
+    ext = output_file.lower().split('.')[-1]
+    
+    if ext == 'csv':
+        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+    elif ext in ['xlsx', 'xls']:
+        df.to_excel(output_file, index=False, engine='openpyxl')
+    else:
+        raise ValueError(f"지원하지 않는 파일 형식: {ext}")
+
+def delay(seconds: float):
+    """
+    지정된 시간만큼 지연
+    
+    Args:
+        seconds: 지연할 시간(초)
+    """
+    time.sleep(seconds)

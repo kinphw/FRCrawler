@@ -32,7 +32,7 @@ def parse_args():
                         help="결과 저장 엑셀 파일 경로 (입력하지 않으면 실행 시 물어봄)")
     parser.add_argument("--list-only", action="store_true",
                         help="목록만 크롤링 (상세 내용 생략)")
-    parser.add_argument("--max-workers", type=int, default=5,
+    parser.add_argument("--max-workers", type=int, default=10,
                         help="상세 내용 크롤링 시 병렬 처리 작업자 수")
     parser.add_argument("--delay", type=float, default=0.5,
                         help="요청 간 지연 시간 (초)")
