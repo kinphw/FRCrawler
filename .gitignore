@@ -1,6 +1,6 @@
 # 자동생성
 logs/*
-test/*
+# test/*
 __pycache__
 *.xlsx
 *.pkl
