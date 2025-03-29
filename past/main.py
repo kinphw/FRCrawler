@@ -32,7 +32,7 @@ def parse_args():
                         help="결과 저장 엑셀 파일 경로 (입력하지 않으면 실행 시 물어봄)")
     parser.add_argument("--list-only", action="store_true",
                         help="목록만 크롤링 (상세 내용 생략)")
-    parser.add_argument("--max-workers", type=int, default=10,
+    parser.add_argument("--max-workers", type=int, default=64,
                         help="상세 내용 크롤링 시 병렬 처리 작업자 수")
     parser.add_argument("--delay", type=float, default=0.5,
                         help="요청 간 지연 시간 (초)")
@@ -40,7 +40,9 @@ def parse_args():
                         help="파일명 입력 프롬프트 없이 기본값 사용")
     parser.add_argument("--load-pickle", type=str, default=None,
                         help="크롤링 대신 저장된 pickle 파일에서 데이터 로드")
-    
+    parser.add_argument("--show-gui", action="store_true",
+                        help="결과를 pandas GUI로 표시")        
+
     return parser.parse_args()
 
 def get_output_filename(default_filename, no_prompt=False):
@@ -178,7 +180,17 @@ def main():
         hours, remainder = divmod(elapsed_time, 3600)
         minutes, seconds = divmod(remainder, 60)
         print(f"크롤링 완료: 총 소요 시간 {int(hours)}시간 {int(minutes)}분 {seconds:.1f}초")
-        
+
+        # GUI 표시 옵션이 있는 경우
+        if args.show_gui and combined_df is not None:
+            try:
+                from pandasgui import show
+                print("pandas GUI를 실행합니다...")
+                show(combined_df)
+            except ImportError:
+                print("pandasgui 패키지가 설치되어 있지 않습니다.")
+                print("설치하려면: pip install pandasgui")        
+
     except KeyboardInterrupt:
         print("\n사용자에 의해 중단되었습니다.")
         sys.exit(1)
