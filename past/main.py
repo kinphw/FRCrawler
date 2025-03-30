@@ -9,8 +9,8 @@ import pandas as pd
 from datetime import datetime
 import traceback
 
-from integ.list_crawler import ListCrawler
-from integ.detail_crawler import DetailCrawler
+from past.list_crawler import ListCrawler
+from past.detail_crawler import DetailCrawler
 
 def parse_args():
     """명령행 인자 파싱"""

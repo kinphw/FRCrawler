@@ -16,15 +16,15 @@ common_params = {
 
 # past 호출해서 크롤링
 
-from integ.main import main as past_main
+from past.main import main as past_main
 # 파라미터 지정해서 실행
 print("\n=== PAST 패키지 크롤링 시작 ===")
 past_df = past_main(**common_params)
-pg.show(past_df)
+#pg.show(past_df)
 
 # late 호출해서 크롤링
 
-from integ.main import main as late_main
+from late.main import main as late_main
 print("\n=== LATE 패키지 크롤링 시작 ===")
 late_df = late_main(**common_params)
 

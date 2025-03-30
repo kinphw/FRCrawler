@@ -16,9 +16,9 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 
-from integ.models import ListItem
-from integ.config import LIST_URL, DEFAULT_HEADERS
-from integ.utils import random_sleep
+from past.models import ListItem
+from past.config import LIST_URL, DEFAULT_HEADERS
+from past.utils import random_sleep
 
 class ListCrawler:
     """금융위원회 과거 회신사례 목록 크롤러"""

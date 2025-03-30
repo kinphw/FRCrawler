@@ -7,10 +7,10 @@ from typing import List
 import pandas as pd
 from tqdm import tqdm
 
-from integ.models import ListItem, CombinedItem
-from integ.detail.fetcher import DetailFetcher
-from integ.detail.parser import DetailParser
-from integ.detail.combiner import DetailCombiner
+from past.models import ListItem, CombinedItem
+from past.detail.fetcher import DetailFetcher
+from past.detail.parser import DetailParser
+from past.detail.combiner import DetailCombiner
 
 class DetailCrawler:
     """금융위원회 과거 회신사례 상세 내용 크롤러"""
