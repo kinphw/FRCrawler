@@ -1,0 +1,55 @@
+# 최종 산출물 컬럼정보 11개(컬럼명은 제시된대로) : id, 구분, 분야, 제목, 회신부서, 담당자, 회신일자, 일련번호, 질의요지, 회답, 이유
+
+각 레코드별 id는 마지막에 일괄 PK로 부여함 (날짜순 오름차순)
+
+#1번째 past_df
+Index(['rownumber', 'pastreqIdx', 'pastreqType', 'pastreqSubject', 'serialNum',
+       'regDate', 'inquiry', 'fact', 'baseLaw', 'answer', 'reason'],
+      dtype='object')
+
+# 매핑
+구분 <= pastreqType
+분야 <= Null
+제목 <= pastreqSubject
+회신부서 <= Null
+담당자 <= Null
+회신일자 <= Null
+일련번호 <= serialNum
+질의요지 <= inquiry + fact + baseLaw
+회답 <= answer + reason
+
+
+#late_df
+Index(['rownumber', 'idx', 'gubun', 'category', 'list_title', 'regDate',
+       'number', 'detail_title', 'registrant', 'reply_date', 'inquiry',
+       'answer', 'reason'],
+
+#매핑
+구분 <= gubun
+분야 <= category
+제목 <= list_title
+회신부서 <= registrant
+담당자 <= Null
+회신일자 <= reply_date
+일련번호 <= number
+질의요지 <= inquiry
+회답 <= answer + reason
+
+#integ_df
+Index(['rownumber', 'dataIdx', 'pastreqType', 'list_title', 'replyRegDate',
+       'category', 'reply_date', 'inquiry', 'answer_conclusion',
+       'answer_content', 'plan', 'extra_data'],
+      dtype='object')       
+
+#매핑
+구분 <= postreqType
+분야 <= category
+제목 <= list_title
+회신부서 <= Null
+담당자 <= Null
+회신일자 <= reply_date
+일련번호 <= dataIdx
+질의요지 <= inquiry
+회답 <= answer_conclusion + answer_content + plan
+
+      

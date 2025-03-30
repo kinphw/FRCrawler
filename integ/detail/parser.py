@@ -37,8 +37,7 @@ class DetailParser:
             reply_date = self._get_td_text(soup, "회신일")
             
             # 건의내용
-            inquiry = self._get_td_text(soup, "건의내용")
-            inquiry = clean_text(inquiry) if inquiry else None
+            inquiry = self._get_td_text(soup, "건의내용")            
 
             # 검토의견
             answer_conclusion = self._get_td_text(soup, "검토의견")
@@ -64,12 +63,25 @@ class DetailParser:
             self.stats.failed_items.append((dataIdx, str(e)))
             return None
     
+    # def _get_td_text(self, soup: BeautifulSoup, th_text: str) -> Optional[str]:
+    #     """th 텍스트에 해당하는 td의 텍스트 추출"""
+    #     th = soup.find('th', string=lambda x: x and th_text in x)
+    #     if th and th.find_next_sibling('td'):
+    #         return html_to_text_preserve_p_br(str(th.find_next_sibling('td')))
+    #     return None
+
     def _get_td_text(self, soup: BeautifulSoup, th_text: str) -> Optional[str]:
         """th 텍스트에 해당하는 td의 텍스트 추출"""
+        from html import unescape
+        
         th = soup.find('th', string=lambda x: x and th_text in x)
         if th and th.find_next_sibling('td'):
-            return html_to_text_preserve_p_br(str(th.find_next_sibling('td')))
-        return None
+            td_content = str(th.find_next_sibling('td'))
+            # 1. HTML 엔티티를 먼저 변환 (&gt; -> > 등)
+            td_content = unescape(td_content)
+            # 2. 그 다음 HTML 태그 처리 및 텍스트 정리
+            return html_to_text_preserve_p_br(td_content)
+        return None    
     
     def _get_reason_by_regex(self, html_content: str) -> Optional[str]:
         """정규식을 사용하여 이유 부분 추출 시도"""

@@ -66,13 +66,13 @@ def clean_text(text: str) -> str:
     if not text:
         return ""
     
-    import re
+    text = html.unescape(text)    
+    
     # HTML 태그 제거
+    import re
     text = re.sub(r'<[^>]+>', ' ', text)
     # 연속된 공백 문자를 하나로
     text = re.sub(r'\s+', ' ', text)
-    
-    text = html.unescape(text)  # HTML 엔티티 변환
     
     # 앞뒤 공백 제거
     return text.strip()

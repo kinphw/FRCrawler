@@ -1,10 +1,9 @@
 # 통합 run
-
-# v0.0.1 : 250326
+# v0.0.2 : 250331
 
 #################################
 
-import pandasgui as pg
+print("공통 인수 지정")
 
 # 공통매개변수 지정 (일자)
 common_params = {
@@ -28,14 +27,30 @@ from late.main import main as late_main
 print("\n=== LATE 패키지 크롤링 시작 ===")
 late_df = late_main(**common_params)
 
-pg.show(late_df)
+# pg.show(late_df)
 
 # integ 호출해서 크롤링
-
+from integ.main import main as integ_main
+print("\n=== INTEG 패키지 크롤링 시작 ===")
+integ_df = integ_main(**common_params)
+# pg.show(integ_df)
 
 # 3개의 결과를 1개의 df로 합침
+print("\n=== Harmonizing ===")
+from harmonizer.main import Harmonizer
+df_harmonized = Harmonizer = Harmonizer(
+    past_df=past_df, 
+    late_df=late_df, 
+    integ_df=integ_df
+).run()
 
+print("\n=== Exporting ===")
 
 # js로 자동전환
+from exporter.exporter import export_dataframe
+export_dataframe(df_harmonized, output_dir="data")
 
-# >> data_i.js 상태로 최종 산출됨
+print("\n=== 완료 ===")
+print("data 폴더에 db_i.js가 저장되었습니다.")
+
+# data/data_i.js 상태로 최종 산출됨
