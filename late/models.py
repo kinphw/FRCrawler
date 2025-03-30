@@ -8,23 +8,23 @@ from typing import Optional, List, Dict, Any
 @dataclass
 class ListItem:
     """목록 아이템 데이터 클래스"""
-    rownumber: int
-    idx: int
-    gubun: str
-    category: Optional[str]
-    title: str
-    regDate: str
-    number: str
+    rownumber: int # 사용할 필요 없는 정보
+    idx: int # 목록 아이템 인덱스
+    gubun: str # 법령해석, 비조치의견서
+    category: Optional[str] # 전자금융 등
+    title: str # 제목
+    regDate: str # 등록일자
+    number: str # 일련번호
 
 @dataclass
 class DetailItem:
     """상세 내용 데이터 클래스"""
-    title: str
-    registrant: Optional[str]
-    reply_date: Optional[str]
-    inquiry: Optional[str]
-    answer: Optional[str]
-    reason: Optional[str]
+    title: str # 제목
+    registrant: Optional[str] # 등록자
+    reply_date: Optional[str] # 회신일자
+    inquiry: Optional[str] # 질의요지
+    answer: Optional[str] # 회답
+    reason: Optional[str] # 이유
 
 @dataclass
 class CombinedItem:

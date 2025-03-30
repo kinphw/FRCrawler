@@ -116,3 +116,9 @@ class ListCrawler:
         """
         list_items = self.get_list_items(start_date, end_date)
         return pd.DataFrame([vars(item) for item in list_items])
+    
+if __name__ == "__main__":
+    crawler = ListCrawler(batch_size=1000)
+    df = crawler.get_list_dataframe(start_date="2000-01-01", end_date="2025-03-31")
+    import pandasgui as pg
+    pg.show(df)
