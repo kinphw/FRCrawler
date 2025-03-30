@@ -4,8 +4,8 @@
 
 from typing import Optional
 
-from late.detail.base_fetcher import BaseFetcher
-from late.config import LAWREQ_DETAIL_URL, ST_NO, MU_NO, ACT_CD
+from integ.detail.base_fetcher import BaseFetcher
+from integ.config import LAWREQ_DETAIL_URL, ST_NO, MU_NO, ACT_CD
 
 class LawFetcher(BaseFetcher):
     """법령해석 상세 페이지 요청 클래스"""

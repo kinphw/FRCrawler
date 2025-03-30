@@ -5,9 +5,9 @@
 from typing import Dict, Any, Optional
 from bs4 import BeautifulSoup
 
-from late.detail.base_parser import BaseParser
-from late.models import DetailItem
-from late.utils import html_to_text_preserve_p_br
+from integ.detail.base_parser import BaseParser
+from integ.models import DetailItem
+from integ.utils import html_to_text_preserve_p_br
 
 class OpinionParser(BaseParser):
     """비조치의견서 상세 페이지 파싱 클래스"""

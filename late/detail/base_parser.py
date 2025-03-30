@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any
 import re
 from bs4 import BeautifulSoup
 
-from late.utils import html_to_text_preserve_p_br
+from integ.utils import html_to_text_preserve_p_br
 
 class BaseParser(ABC):
     """

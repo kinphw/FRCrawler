@@ -1,126 +1,152 @@
 """
-통합회신사례 목록 크롤러
+목록 페이지 크롤링 클래스
 """
-import logging
-from datetime import datetime
-from typing import List, Optional
-import os
-import sys
-import pandas as pd
-
-# 상위 디렉토리를 import path에 추가
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
-
 import requests
-from integ.config import LIST_URL, DEFAULT_HEADERS  # 상대경로를 절대경로로 변경
+import json
+import logging
+import pandas as pd
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+
+from integ.config import (
+    LIST_URL, DEFAULT_HEADERS, DEFAULT_BATCH_SIZE, 
+    DEFAULT_LIST_PARAMS, GUBUN_MAPPING, DEFAULT_DELAY
+)
 from integ.models import ListItem
-from integ.utils import safe_get
+from integ.utils import random_sleep
 
 logger = logging.getLogger(__name__)
 
 class ListCrawler:
-    """목록 페이지 크롤러"""
-    
-    def __init__(self, batch_size: int = 1000):
+    """금융위원회 통합회신사례 목록 크롤러"""
+
+    def __init__(self, batch_size: int = DEFAULT_BATCH_SIZE, max_items: Optional[int] = None):
         """
         Args:
-            batch_size: 한 번에 요청할 목록 항목 수
+            batch_size: 한 번에 요청할 항목 수
+            max_items: 최대 크롤링할 항목 수
         """
         self.batch_size = batch_size
+        self.max_items = max_items
+        self.headers = DEFAULT_HEADERS.copy()
         self.session = requests.Session()
-        self.session.headers.update(DEFAULT_HEADERS)
-    
-    def crawl(self, start_date: str, end_date: Optional[str] = None) -> List[ListItem]:
+        self.session.headers.update(self.headers)
+
+    def get_list_dataframe(self, start_date: str, end_date: Optional[str] = None) -> pd.DataFrame:
         """
-        목록 크롤링 실행
+        목록 항목을 DataFrame으로 반환
         
         Args:
-            start_date: 조회 시작일 (YYYY-MM-DD)
-            end_date: 조회 종료일 (YYYY-MM-DD, None이면 오늘)
+            start_date: 조회 시작일 (YYYY-MM-DD 형식)
+            end_date: 조회 종료일 (YYYY-MM-DD 형식, 기본값: 현재 날짜)
             
         Returns:
-            ListItem 객체 리스트
+            수집된 목록 항목이 포함된 DataFrame
         """
-        # 날짜 형식 변환
-        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-        if end_date:
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-        else:
-            end_dt = datetime.now()
+        # 목록 항목 가져오기
+        items = self.get_list_items(start_date, end_date)
+        
+        if not items:
+            logger.warning("조회 결과가 없습니다.")
+            return pd.DataFrame()
             
-        start_date_fmt = start_dt.strftime('%Y.%m.%d')
-        end_date_fmt = end_dt.strftime('%Y.%m.%d')
+        # ListItem 객체를 DataFrame으로 직접 변환 (to_dict 메서드 활용)
+        items_dict = [item.to_dict() for item in items]
+            
+        # DataFrame 생성
+        df = pd.DataFrame(items_dict)
+        return df
+
+    def get_list_items(self, start_date: str, end_date: Optional[str] = None) -> List[ListItem]:
+        """
+        날짜 범위에 해당하는 목록 항목 가져오기
         
-        logger.info(f"목록 크롤링 시작: {start_date_fmt} ~ {end_date_fmt}")
+        Args:
+            start_date: 조회 시작일 (YYYY-MM-DD 형식)
+            end_date: 조회 종료일 (YYYY-MM-DD 형식, 기본값: 현재 날짜)
+            
+        Returns:
+            ListItem 객체 목록
+        """
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            
+        # logger.info(f"목록 조회 기간: {start_date} ~ {end_date}")
+        logger.info("목록 조회기간은 통합조회에서는 영향이 없습니다.")
         
-        items = []
-        page = 1
+        # 요청 파라미터 기본값 복사
+        params = DEFAULT_LIST_PARAMS.copy()
         
+        # 날짜 및 배치 크기 설정 업데이트
+        params.update({
+            "length": str(self.batch_size),
+            # "searchStartDt": start_date.replace("-", ""),
+            # "searchEndDt": end_date.replace("-", ""),
+            # 참고로 실제 웹 요청 payload는 searchType이 전부임. 이게 뭐냐에 따라서 결과가 바뀜 (웃긴게 날짜는 영향이 없음)
+        })
+        
+        # 요청 파라미터
+        start_idx = 0
+        collected_items = []
+        total_count = None
+        
+        # 데이터 페이징 처리
         while True:
-            logger.info(f"페이지 {page} 요청 중...")
-            
-            # DataTables 요청 파라미터
-            params = {
-                "draw": 1,
-                "columns[0][data]": "rownumber",
-                "columns[0][searchable]": "true",
-                "columns[0][orderable]": "false",
-                "columns[1][data]": "pastreqType",
-                "columns[1][searchable]": "true",
-                "columns[1][orderable]": "false",
-                "columns[2][data]": "title",
-                "columns[2][searchable]": "true",
-                "columns[2][orderable]": "false",
-                "columns[3][data]": "replyRegDate",
-                "columns[3][searchable]": "true",
-                "columns[3][orderable]": "false",
-                "order[0][column]": 0,
-                "order[0][dir]": "asc",
-                "start": (page - 1) * self.batch_size,
-                "length": self.batch_size,
-                "search[value]": "",
-                "searchKeyword": "",
-                "searchCondition": "",
-                "searchType": ""
-            }
+            # 시작 인덱스 업데이트
+            params["start"] = str(start_idx)
             
             try:
-                response = self.session.post(LIST_URL, data=params)  # POST 요청 유지
+                logger.info(f"목록 요청: start={start_idx}, length={self.batch_size}")
+                response = self.session.post(LIST_URL, data=params)
                 response.raise_for_status()
                 
-                data = response.json()
-                list_data = data.get('data', [])  # 'list' 대신 'data' 키 사용
+                # JSON 응답 파싱
+                data = json.loads(response.text)
                 
-                if not list_data:
+                # 처음 요청시 총 항목 수 확인
+                if total_count is None:
+                    total_count = data.get("recordsTotal", 0)
+                    logger.info(f"총 항목 수: {total_count}")
+                    
+                    # 최대 항목 수 제한 적용
+                    if self.max_items and self.max_items < total_count:
+                        logger.info(f"최대 {self.max_items}개 항목으로 제한합니다 (전체: {total_count})")
+                        total_count = self.max_items
+                
+                # 응답 데이터 추출
+                items_data = data.get("data", [])
+                if not items_data:
+                    logger.debug("더 이상 항목이 없습니다.")
                     break
                     
-                # ListItem 객체로 변환
-                for item in list_data:
-                    items.append(ListItem(
-                        dataIdx=int(safe_get(item, 'dataIdx', default=0)),  # 필드명 수정
-                        pastreqType=safe_get(item, 'pastreqType', default=''),  # 필드명 수정
-                        title=safe_get(item, 'title', default=''),
-                        replyRegDate=safe_get(item, 'replyRegDate', default='')  # 필드명 수정
-                    ))
+                logger.debug(f"수신 항목 수: {len(items_data)}")
                 
-                # 마지막 페이지 체크
-                total_records = int(data.get('recordsTotal', 0))
-                if (page - 1) * self.batch_size + len(list_data) >= total_records:
-                    break
+                # ListItem 객체로 변환하여 추가
+                for item_data in items_data:
+                    list_item = ListItem.from_dict(item_data)
+                    collected_items.append(list_item)
                     
-                page += 1
+                    # 최대 항목 수 도달 시 중단
+                    if self.max_items and len(collected_items) >= self.max_items:
+                        logger.info(f"최대 항목 수({self.max_items})에 도달했습니다.")
+                        break
+                
+                # 다음 페이지 설정 및 종료 조건 확인
+                start_idx += len(items_data)
+                if start_idx >= total_count or (self.max_items and len(collected_items) >= self.max_items):
+                    break
+                
+                # 추가 요청 전 딜레이
+                random_sleep(DEFAULT_DELAY)
                 
             except Exception as e:
-                logger.error(f"목록 페이지 {page} 요청 실패: {str(e)}")
-                logger.error(f"Response content: {response.text if 'response' in locals() else 'No response'}")
+                logger.error(f"목록 요청 실패: {str(e)}")
                 break
-        
-        logger.info(f"총 {len(items)}개의 항목을 찾았습니다.")
-        return items
-
-if __name__ == "__main__":
+                
+        logger.info(f"목록 크롤링 완료: {len(collected_items)}개 항목")
+        return collected_items
+    
+if __name__=="__main__":
     # 로깅 설정
     logging.basicConfig(level=logging.INFO)
     
@@ -134,20 +160,10 @@ if __name__ == "__main__":
     
     print(f"테스트 기간: {start_date} ~ {end_date}")
     
-    # 크롤링 실행
-    try:
-        items = crawler.crawl(start_date=start_date, end_date=end_date)
-        
-        # 결과 출력
-        print("\n=== 크롤링 결과 ===")
-        print(f"총 {len(items)}개 항목 수집")
-        print("\n처음 5개 항목:")
-        for item in items[:5]:
-            print(f"- [{item.replyRegDate}] {item.title} ({item.pastreqType})")
+    # 크롤링 실행        
+    df = crawler.get_list_dataframe(start_date=start_date, end_date=end_date)  
+    
+    import pandasgui as pg
+    pg.show(df)
 
-        # DataFrame으로 변환하여 pickle로 저장
-        df = pd.DataFrame([item.__dict__ for item in items])
-        df.to_pickle('list_items.pkl')    
-            
-    except Exception as e:
-        print(f"테스트 중 오류 발생: {str(e)}")
+    # df.to_pickle('list_items.pkl')

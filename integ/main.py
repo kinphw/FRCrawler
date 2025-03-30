@@ -1,24 +1,18 @@
 """
-통합회신사례 크롤러 실행 스크립트
+통합회신사례 크롤링 메인 모듈 : "현장건의 과제" 만 처리리
 """
 import argparse
 import logging
-import os
-import sys
+import time
+import traceback
 from datetime import datetime
-import concurrent.futures
-from bs4 import BeautifulSoup  # 추가
+from typing import Dict, List, Optional, Any
 
 import pandas as pd
 
-# 상위 디렉토리를 import path에 추가
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, parent_dir)
-
 from integ.list_crawler import ListCrawler
-from integ.detail.factory import DetailCrawlerFactory
-from integ.models import CombinedItem
-from integ.utils import save_dataframe, delay
+from integ.detail_crawler import DetailCrawler
+from integ.config import DEFAULT_DELAY, DEFAULT_MAX_WORKERS, DEFAULT_BATCH_SIZE
 
 # 로깅 설정
 logging.basicConfig(
@@ -28,113 +22,98 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def crawl_data(start_date: str, end_date: str = None, max_items: int = None, 
-               batch_size: int = 1000, delay_time: float = 0.5, workers: int = 10):
-    """
-    실제 크롤링 비즈니스 로직
-    """
-    # 1. 목록 크롤러 실행
-    logger.info(f"크롤링 시작: {start_date} ~ {end_date}")
-    list_crawler = ListCrawler(batch_size=batch_size)
-    list_items = list_crawler.crawl(start_date, end_date)
+def parse_args():
+    """명령행 인자 파싱"""
+    parser = argparse.ArgumentParser(description="금융위원회 통합회신사례 크롤러")
     
-    # 최대 항목 수 제한
-    if max_items:
-        list_items = list_items[:max_items]
-        logger.info(f"최대 항목 수 제한으로 {max_items}개만 처리합니다.")
+    parser.add_argument("--start-date", type=str, default="2000-01-01",
+                        help="크롤링 시작일 (YYYY-MM-DD 형식)")
+    parser.add_argument("--end-date", type=str, default=None,
+                        help="크롤링 종료일 (YYYY-MM-DD 형식, 기본값: 오늘)")
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE,
+                        help="한 번에 요청할 항목 수")
+    parser.add_argument("--max-items", type=int, default=None,
+                        help="최대 크롤링할 항목 수")
+    parser.add_argument("--max-workers", type=int, default=DEFAULT_MAX_WORKERS,
+                        help="상세 내용 크롤링 시 병렬 처리 작업자 수")
+    parser.add_argument("--delay", type=float, default=DEFAULT_DELAY,
+                        help="요청 간 지연 시간 (초)")
+    parser.add_argument("--gubun-codes", type=int, nargs='+',
+                        help="처리할 문서 유형 코드 (1:법령해석, 2:비조치의견서, 3:현장점검의견, 4:과거회신사례)")
     
-    # 2. 상세 크롤링 실행
-    logger.info(f"상세 페이지 크롤링 시작: {len(list_items)}개 항목")
-    factory = DetailCrawlerFactory()
-    detail_items = []
-    
-    def process_item(list_item):
-        try:
-            crawler = factory.create_crawler(list_item.gubun)
-            params = {"idx": list_item.idx}
-            response = crawler.session.post(crawler.DETAIL_URL, data=params)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            detail_item = crawler.parse(soup, list_item.title, list_item.idx)
-            
-            delay(delay_time)
-            return detail_item
-        except Exception as e:
-            logger.error(f"상세 페이지 크롤링 실패 (idx: {list_item.idx}): {str(e)}")
-            return None
-    
-    # 병렬 처리로 상세 정보 수집
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        future_to_item = {
-            executor.submit(process_item, item): item for item in list_items
-        }
-        
-        for future in concurrent.futures.as_completed(future_to_item):
-            list_item = future_to_item[future]
-            try:
-                detail_item = future.result()
-                if detail_item:
-                    detail_items.append(detail_item)
-            except Exception as e:
-                logger.error(f"상세 페이지 처리 실패 (idx: {list_item.idx}): {str(e)}")
-    
-    # 3. 결과 통합
-    combined_items = []
-    for list_item, detail_item in zip(list_items, detail_items):
-        if detail_item:  # 상세 정보 수집 성공한 경우만
-            combined_items.append(
-                CombinedItem.from_items(list_item, detail_item)
-            )
-    
-    logger.info(f"상세 페이지 크롤링 완료: {len(combined_items)}/{len(list_items)}개 성공")
-            
-    # 4. DataFrame 변환
-    df = pd.DataFrame([vars(item) for item in combined_items])
-    
-    return df
+    return parser.parse_args()
 
-def main():
-    """CLI 진입점"""
-    parser = argparse.ArgumentParser(description='금융위원회 통합회신사례 크롤러')
+def main(start_date: str = "2000-01-01", end_date: Optional[str] = None, 
+         batch_size: int = DEFAULT_BATCH_SIZE, max_items: Optional[int] = None, 
+         max_workers: int = DEFAULT_MAX_WORKERS, delay: float = DEFAULT_DELAY
+         ) -> pd.DataFrame:
+    """
+    메인 실행 함수 - 순수 데이터 조회 기능만 제공
     
-    parser.add_argument('-s', '--start-date', type=str, default='2023-01-01',
-                        help='조회 시작일 (YYYY-MM-DD 형식)')
-    parser.add_argument('-e', '--end-date', type=str, default=None,
-                        help='조회 종료일 (YYYY-MM-DD 형식, 기본값: 오늘)')
-    parser.add_argument('-m', '--max-items', type=int, default=None,
-                        help='최대 크롤링 항목 수')
-    parser.add_argument('-b', '--batch-size', type=int, default=1000,
-                        help='한 번에 요청할 목록 항목 수')
-    parser.add_argument('-d', '--delay', type=float, default=0.5,
-                        help='상세 요청 간 지연 시간 (초)')
-    parser.add_argument('-w', '--workers', type=int, default=10,
-                        help='병렬 처리 시 최대 worker 수')
-    parser.add_argument('-o', '--output', type=str, default=None,
-                        help='결과를 저장할 파일 경로')
-    
-    args = parser.parse_args()
-    
-    try:
-        df = crawl_data(
-            start_date=args.start_date,
-            end_date=args.end_date,
-            max_items=args.max_items,
-            batch_size=args.batch_size,
-            delay_time=args.delay,
-            workers=args.workers
-        )
+    Args:
+        start_date: 조회 시작일 (기본값: "2000-01-01")
+        end_date: 조회 종료일 (기본값: 현재 날짜)
+        batch_size: 한 번에 요청할 항목 수 (기본값: 기본값 사용)
+        max_items: 최대 크롤링 항목 수 (기본값: 제한 없음)
+        max_workers: 병렬 처리 작업자 수 (기본값: 기본값 사용)
+        delay: 요청 간 지연 시간 초 (기본값: 기본값 사용)        
         
-        if args.output:
-            save_dataframe(df, args.output)
-            logger.info(f"결과가 {args.output}에 저장되었습니다.")
-            
-    except KeyboardInterrupt:
-        logger.info("\n사용자에 의해 중단되었습니다.")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"크롤링 중 오류 발생: {str(e)}")
-        sys.exit(1)
+    Returns:
+        문서 유형별 결과 데이터프레임 딕셔너리
+    """
+    # try:
+    start_time = time.time()
+    logger.info(f"통합회신사례 크롤링 시작: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # 1. 목록 크롤링
+    logger.info(f"목록 크롤링 시작: {start_date} ~ {end_date or '현재'}")
+    list_crawler = ListCrawler(batch_size=batch_size, max_items=max_items)
+    # list_df = list_crawler.get_list_dataframe(start_date=start_date, end_date=end_date)
+    list_combined = list_crawler.get_list_items(start_date=start_date, end_date=end_date)
+    
+    # if list_df.empty:
+    #     logger.warning("목록 크롤링 결과가 없습니다.")
+    #     return {}
+    
+    logger.info(f"목록 크롤링 완료: 총 {len(list_combined)}개 항목")
+    
+    # 2. 상세 페이지 크롤링
+    # 다 삭제하고 "현장건의 과제"만 추출할 것임    
+    detail_crawler = DetailCrawler(delay_seconds=delay, max_workers=max_workers)
+    result_df = detail_crawler.get_combined_dataframe(list_combined)
+    
+    # 3. 소요 시간 및 결과 통계 출력
+    elapsed_time = time.time() - start_time
+    from integ.utils import format_elapsed_time
+    logger.info(f"크롤링 완료: 총 소요 시간 {format_elapsed_time(elapsed_time)}")
+    
+    # 결과 통계
+    if not result_df.empty:
+        total_items = result_df.shape[0]
+        logger.info(f"총 결과 항목: {total_items}개")
+    
+    return result_df
+        
+    # except KeyboardInterrupt:
+    #     logger.info("사용자에 의해 중단되었습니다.")
+    #     return {}
+    # except Exception as e:
+    #     logger.error(f"크롤링 중 오류 발생: {str(e)}")
+    #     logger.debug(traceback.format_exc())
+    #     return {}
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    
+    # 명령행에서 실행 시 결과 저장 옵션 처리
+    result_df:pd.DataFrame = main(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        batch_size=args.batch_size,
+        max_items=args.max_items,
+        max_workers=args.max_workers,
+        delay=args.delay        
+    )
+        
+    import pandasgui as pg
+    pg.show(result_df)

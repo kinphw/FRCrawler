@@ -7,14 +7,14 @@ from typing import List, Optional
 import concurrent.futures
 from tqdm import tqdm
 
-from late.models import ListItem, DetailItem, CombinedItem
-from late.detail.base_fetcher import BaseFetcher
-from late.detail.base_parser import BaseParser
-from late.detail.law.fetcher import LawFetcher
-from late.detail.law.parser import LawParser
-from late.detail.opinion.fetcher import OpinionFetcher
-from late.detail.opinion.parser import OpinionParser
-from late.detail.combiner import DetailCombiner
+from integ.models import ListItem, DetailItem, CombinedItem
+from integ.detail.base_fetcher import BaseFetcher
+from integ.detail.base_parser import BaseParser
+from integ.detail.law.fetcher import LawFetcher
+from integ.detail.law.parser import LawParser
+from integ.detail.opinion.fetcher import OpinionFetcher
+from integ.detail.opinion.parser import OpinionParser
+from integ.detail.combiner import DetailCombiner
 
 class DetailCrawler:
     """금융위원회 회신사례 상세 내용 크롤러 (래퍼 클래스)"""

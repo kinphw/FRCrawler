@@ -2,7 +2,7 @@
 목록 및 상세 데이터 결합 클래스
 """
 
-from late.models import ListItem, DetailItem, CombinedItem
+from integ.models import ListItem, DetailItem, CombinedItem
 
 class DetailCombiner:
     """목록 및 상세 데이터 결합기"""
