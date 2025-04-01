@@ -5,6 +5,7 @@ __pycache__
 *.xlsx
 *.pkl
 .vscode
+db_i.js
 
 integ_old
 integ_old2

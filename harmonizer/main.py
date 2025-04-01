@@ -255,11 +255,19 @@ class Harmonizer:
         Returns:
             pd.DataFrame: 정리된 최종 DataFrame
         """
-        # 회신일자 기준으로 정렬
+        # 회신일자 형식 표준화
         if '회신일자' in df.columns:
-            # 날짜 형식 표준화
             df['회신일자'] = pd.to_datetime(df['회신일자'], errors='coerce')
-            df = df.sort_values(by='회신일자').reset_index(drop=True)
+            
+            # 회신일자 있는/없는 데이터 분리
+            df_with_date = df[df['회신일자'].notna()].copy()
+            df_no_date = df[df['회신일자'].isna()].copy()
+            
+            # 회신일자 있는 데이터만 정렬
+            df_with_date = df_with_date.sort_values(by='회신일자')
+            
+            # 다시 합치기 (회신일자 없는 데이터는 마지막에)
+            df = pd.concat([df_with_date, df_no_date]).reset_index(drop=True)
         
         # ID 부여
         df.insert(0, 'id', range(1, len(df) + 1))
