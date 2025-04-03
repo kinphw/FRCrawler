@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 from late.detail.base_parser import BaseParser
 from late.models import DetailItem
-from late.utils import html_to_text_preserve_p_br
+from common.utils import html_to_text_preserve_p_br
 
 class LawParser(BaseParser):
     """법령해석 상세 페이지 파싱 클래스"""

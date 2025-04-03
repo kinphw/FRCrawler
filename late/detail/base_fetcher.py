@@ -10,7 +10,7 @@ import re
 from bs4 import BeautifulSoup
 
 from late.models import DetailItem
-from late.utils import random_sleep, html_to_text_preserve_p_br
+from common.utils import random_sleep, html_to_text_preserve_p_br
 
 class BaseFetcher(ABC):
     """HTML 페이지 요청 기본 클래스"""

@@ -85,33 +85,46 @@ def main(start_date="2000-01-01", end_date=None, batch_size=1000,
         return pd.DataFrame()  # 빈 데이터프레임 반환
 
 if __name__ == "__main__":
-    args = parse_args()
+
     result_df = main(
-        start_date=args.start_date,
-        end_date=args.end_date,
-        batch_size=args.batch_size,
-        max_items=args.max_items,
-        max_workers=args.max_workers,
-        delay=args.delay
+        start_date="2020-07-28",
+        end_date="2020-07-28",
+        batch_size=100,
+        max_items=1000,
+        max_workers=64,
+        delay=0.2
     )
+
+    import pandasgui as pg
+    pg.show(result_df)
+
+    # args = parse_args()
+    # result_df = main(
+    #     start_date=args.start_date,
+    #     end_date=args.end_date,
+    #     batch_size=args.batch_size,
+    #     max_items=args.max_items,
+    #     max_workers=args.max_workers,
+    #     delay=args.delay
+    # )
     
-    # 직접 실행 시 간단한 통계 출력
-    if not result_df.empty:
-        print("\n=== 결과 요약 ===")
-        print(f"총 항목 수: {len(result_df)}개")
+    # # 직접 실행 시 간단한 통계 출력
+    # if not result_df.empty:
+    #     print("\n=== 결과 요약 ===")
+    #     print(f"총 항목 수: {len(result_df)}개")
         
-        # 문서 유형별 통계
-        if 'gubun' in result_df.columns:
-            print("\n문서 유형별 통계:")
-            type_counts = result_df['gubun'].value_counts()
-            for doc_type, count in type_counts.items():
-                print(f"- {doc_type}: {count}개")
+    #     # 문서 유형별 통계
+    #     if 'gubun' in result_df.columns:
+    #         print("\n문서 유형별 통계:")
+    #         type_counts = result_df['gubun'].value_counts()
+    #         for doc_type, count in type_counts.items():
+    #             print(f"- {doc_type}: {count}개")
         
-        # 데이터 샘플 (첫 3개 항목 제목만)
-        if 'title' in result_df.columns:
-            print("\n처음 3개 항목 제목:")
-            for idx, title in enumerate(result_df['title'].head(3), 1):
-                title_str = title if isinstance(title, str) else str(title)
-                print(f"{idx}. {title_str[:50]}{'...' if len(title_str) > 50 else ''}")
+    #     # 데이터 샘플 (첫 3개 항목 제목만)
+    #     if 'title' in result_df.columns:
+    #         print("\n처음 3개 항목 제목:")
+    #         for idx, title in enumerate(result_df['title'].head(3), 1):
+    #             title_str = title if isinstance(title, str) else str(title)
+    #             print(f"{idx}. {title_str[:50]}{'...' if len(title_str) > 50 else ''}")
         
-        print("\n결과 데이터프레임이 'result_df' 변수에 저장되었습니다.")
+    #     print("\n결과 데이터프레임이 'result_df' 변수에 저장되었습니다.")

@@ -5,7 +5,7 @@ from typing import Optional
 from dataclasses import dataclass
 
 from integ.models import DetailItem
-from integ.utils import html_to_text_preserve_p_br, clean_text
+from common.utils import html_to_text_preserve_p_br, clean_text
 
 @dataclass
 class ParsingStats:

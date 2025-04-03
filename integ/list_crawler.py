@@ -13,7 +13,7 @@ from integ.config import (
     DEFAULT_LIST_PARAMS, GUBUN_MAPPING, DEFAULT_DELAY
 )
 from integ.models import ListItem
-from integ.utils import random_sleep
+from common.utils import random_sleep
 
 logger = logging.getLogger(__name__)
 

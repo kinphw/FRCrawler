@@ -84,7 +84,7 @@ def main(start_date: str = "2000-01-01", end_date: Optional[str] = None,
     
     # 3. 소요 시간 및 결과 통계 출력
     elapsed_time = time.time() - start_time
-    from integ.utils import format_elapsed_time
+    from common.utils import format_elapsed_time
     logger.info(f"크롤링 완료: 총 소요 시간 {format_elapsed_time(elapsed_time)}")
     
     # 결과 통계

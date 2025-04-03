@@ -4,8 +4,8 @@ import re
 from typing import Optional
 from dataclasses import dataclass
 
-from ..models import DetailItem
-from ..utils import html_to_text_preserve_p_br
+from past.models import DetailItem
+from common.utils import html_to_text_preserve_p_br
 
 @dataclass
 class ParsingStats:
