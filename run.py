@@ -51,6 +51,6 @@ from exporter.exporter import export_dataframe
 export_dataframe(df_harmonized, output_dir="data")
 
 print("\n=== 완료 ===")
-print("data 폴더에 db_i.js가 저장되었습니다.")
+print("data 폴더에 결과물이 저장되었습니다.")
 
 # data/data_i.js 상태로 최종 산출됨

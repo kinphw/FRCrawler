@@ -29,6 +29,7 @@ class Exporter:
         """
         self.df = df
         self.output_dir = Path(output_dir)
+        self.pickle_file = self.output_dir / "db_i.pkl"
         self.db_file = self.output_dir / "db_i.db"
         self.js_file = self.output_dir / "db_i.js"
         
@@ -38,13 +39,22 @@ class Exporter:
     def export(self) -> None:
         """전체 내보내기 프로세스 실행"""
         try:
+            self._to_pickle() # pickle로 저장 (선택적)
             self._to_sqlite()
             self._to_javascript()
             logger.info(f"✅ 내보내기 완료: {self.js_file}")
         except Exception as e:
             logger.error(f"내보내기 중 오류 발생: {str(e)}")
             raise
-            
+
+    def _to_pickle(self) -> None:
+        """DataFrame을 pickle 파일로 저장 (선택적)"""
+        logger.info(f"Pickle 파일 생성 중: {self.pickle_file}")
+        
+        # DataFrame을 pickle 파일로 저장
+        self.df.to_pickle(self.pickle_file)
+        logger.info(f"✓ Pickle 파일 생성 완료: {self.pickle_file}")        
+
     def _to_sqlite(self) -> None:
         """DataFrame을 SQLite DB로 변환"""
         logger.info(f"SQLite DB 생성 중: {self.db_file}")
@@ -115,7 +125,8 @@ def export_dataframe(df: pd.DataFrame, output_dir: str = "data") -> None:
     try:
         exporter.export()
     finally:
-        exporter.cleanup()
+        # exporter.cleanup()
+        print("db파일은 정리하지 않습니다. db파일과 js파일 중 선택하여 사용하세요.")
 
 
 if __name__ == "__main__":
