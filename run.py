@@ -7,8 +7,8 @@ print("공통 인수 지정")
 
 # 공통매개변수 지정 (일자)
 common_params = {
-    "start_date": "2000-01-01",
-    "end_date": "2025-03-31",
+    "start_date": "2025-03-25",
+    "end_date": "2025-06-30",
     "max_workers": 64,  # 적절한 값으로 조정
     "delay": 0.2,       # 적절한 값으로 조정
 }

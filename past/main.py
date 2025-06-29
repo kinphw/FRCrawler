@@ -62,10 +62,25 @@ def main(start_date="2000-01-01", end_date=None, batch_size=1000,
             
         print(f"목록 크롤링 완료: {len(list_items)}개 항목")
         
+        # 날짜 조건에 맞는 항목 필터링
+        if end_date is None:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        
+        filtered_items = [
+            item for item in list_items
+            if start_date <= item.regDate <= end_date
+        ]
+        print(f"필터링된 항목 수: {len(filtered_items)}개 (조건: {start_date} ~ {end_date})")
+        
+        if not filtered_items:
+            print("필터링된 항목이 없습니다. 작업을 종료합니다.")
+            return pd.DataFrame()  # 빈 데이터프레임 반환
+                
         # 상세 내용 크롤링 및 결합
         print("상세 내용 크롤링 중...")
         detail_crawler = DetailCrawler(delay_seconds=delay, max_workers=max_workers)
-        result_df = detail_crawler.get_combined_dataframe(list_items)
+        #result_df = detail_crawler.get_combined_dataframe(list_items)
+        result_df = detail_crawler.get_combined_dataframe(filtered_items)
         
         # 소요 시간 출력
         elapsed_time = time.time() - start_time
@@ -87,8 +102,10 @@ def main(start_date="2000-01-01", end_date=None, batch_size=1000,
 if __name__ == "__main__":
     args = parse_args()
     result = main(
-        start_date=args.start_date,
-        end_date=args.end_date,
+        #start_date=args.start_date,
+        start_date = "2025-06-01",
+        #end_date=args.end_date,
+        end_date="2025-06-30",
         batch_size=args.batch_size,
         max_items=args.max_items,
         max_workers=args.max_workers,

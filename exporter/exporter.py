@@ -39,9 +39,9 @@ class Exporter:
     def export(self) -> None:
         """전체 내보내기 프로세스 실행"""
         try:
-            self._to_pickle() # pickle로 저장 (선택적)
-            self._to_sqlite()
-            self._to_javascript()
+            self._to_pickle() # pickle로 저장 (선택적) # pickle만 추출함
+            #self._to_sqlite()
+            #self._to_javascript()
             logger.info(f"✅ 내보내기 완료: {self.js_file}")
         except Exception as e:
             logger.error(f"내보내기 중 오류 발생: {str(e)}")

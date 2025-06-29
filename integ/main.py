@@ -77,10 +77,27 @@ def main(start_date: str = "2000-01-01", end_date: Optional[str] = None,
     
     logger.info(f"목록 크롤링 완료: 총 {len(list_combined)}개 항목")
     
+
+    # 1-2. 날짜 조건에 맞는 항목 필터링
+    if end_date is None:
+        end_date = datetime.now().strftime('%Y-%m-%d')
+    
+    filtered_items = [
+        item for item in list_combined 
+        if start_date <= item.replyRegDate <= end_date
+    ]
+    logger.info(f"필터링된 항목 수: {len(filtered_items)}개 (조건: {start_date} ~ {end_date})")
+    
+    if not filtered_items:
+        logger.warning("필터링된 항목이 없습니다. 작업을 종료합니다.")
+        return pd.DataFrame()
+    
+
     # 2. 상세 페이지 크롤링
     # 다 삭제하고 "현장건의 과제"만 추출할 것임    
     detail_crawler = DetailCrawler(delay_seconds=delay, max_workers=max_workers)
-    result_df = detail_crawler.get_combined_dataframe(list_combined)
+    # result_df = detail_crawler.get_combined_dataframe(list_combined)
+    result_df = detail_crawler.get_combined_dataframe(filtered_items)
     
     # 3. 소요 시간 및 결과 통계 출력
     elapsed_time = time.time() - start_time
@@ -107,8 +124,10 @@ if __name__ == "__main__":
     
     # 명령행에서 실행 시 결과 저장 옵션 처리
     result_df:pd.DataFrame = main(
-        start_date=args.start_date,
-        end_date=args.end_date,
+        #start_date=args.start_date,
+        start_date = "2025-06-01",        
+        #end_date=args.end_date,
+        end_date = "2025-06-30",
         batch_size=args.batch_size,
         max_items=args.max_items,
         max_workers=args.max_workers,
