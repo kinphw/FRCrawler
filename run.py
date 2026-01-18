@@ -1,14 +1,16 @@
-# 통합 run
-# v0.0.2 : 250331
+import os
+from dotenv import load_dotenv
 
 #################################
+# .env 파일 로드
+load_dotenv()
 
-print("공통 인수 지정")
+print("공통 인수 지정 (.env 파일에서 로드)")
 
 # 공통매개변수 지정 (일자)
 common_params = {
-    "start_date": "2025-03-25",
-    "end_date": "2025-06-30",
+    "start_date": os.getenv("START_DATE"),
+    "end_date": os.getenv("END_DATE"),
     "max_workers": 64,  # 적절한 값으로 조정
     "delay": 0.2,       # 적절한 값으로 조정
 }
