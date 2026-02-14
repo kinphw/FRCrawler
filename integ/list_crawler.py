@@ -14,6 +14,7 @@ from integ.config import (
 )
 from integ.models import ListItem
 from common.utils import random_sleep
+from common.ssl_adapter import get_legacy_session
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class ListCrawler:
         self.batch_size = batch_size
         self.max_items = max_items
         self.headers = DEFAULT_HEADERS.copy()
-        self.session = requests.Session()
+        self.session = get_legacy_session()
         self.session.headers.update(self.headers)
 
     def get_list_dataframe(self, start_date: str, end_date: Optional[str] = None) -> pd.DataFrame:

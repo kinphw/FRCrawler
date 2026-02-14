@@ -16,6 +16,7 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 
+from common.ssl_adapter import get_legacy_session
 from past.models import ListItem
 from past.config import LIST_URL, DEFAULT_HEADERS
 from common.utils import random_sleep
@@ -32,6 +33,7 @@ class ListCrawler:
         self.batch_size = batch_size
         self.max_items = max_items
         self.headers = DEFAULT_HEADERS.copy()
+        self.session = get_legacy_session()
         
     def get_list_items(self, start_date: str = "2000-01-01", end_date: Optional[str] = None) -> List[ListItem]:
         """
@@ -72,7 +74,7 @@ class ListCrawler:
                 "searchReplyRegDateEnd": end_date
             }
             
-            response = requests.post(LIST_URL, headers=self.headers, data=data)
+            response = self.session.post(LIST_URL, headers=self.headers, data=data)
             json_data = response.json()
             
             # 첫 번째 요청에서 전체 개수 확인

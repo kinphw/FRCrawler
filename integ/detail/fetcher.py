@@ -3,12 +3,14 @@ import requests
 from typing import Optional
 
 from integ.config import DETAIL_URL, DETAIL_HEADERS, ST_NO, MU_NO, ACT_CD, CHECKPLACE_SET_IDX
+from common.ssl_adapter import get_legacy_session
 
 class DetailFetcher:
     """상세 페이지 HTML 가져오기"""
     
     def __init__(self):
         self.headers = DETAIL_HEADERS.copy()
+        self.session = get_legacy_session()
         
     def get_html(self, checkplaceNo: int) -> str:
         """상세 페이지 HTML 요청"""
@@ -19,7 +21,7 @@ class DetailFetcher:
             "checkplaceSetIdx": CHECKPLACE_SET_IDX,
             "actCd": ACT_CD
         }
-        response = requests.post(DETAIL_URL, headers=self.headers, data=data)
+        response = self.session.post(DETAIL_URL, headers=self.headers, data=data)
         return response.text
     
 if __name__ == "__main__":
