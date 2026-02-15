@@ -15,6 +15,7 @@ from late.detail.law.parser import LawParser
 from late.detail.opinion.fetcher import OpinionFetcher
 from late.detail.opinion.parser import OpinionParser
 from late.detail.combiner import DetailCombiner
+from common.ssl_adapter import get_legacy_session
 
 class DetailCrawler:
     """금융위원회 회신사례 상세 내용 크롤러 (래퍼 클래스)"""
@@ -43,6 +44,9 @@ class DetailCrawler:
             "법령해석": LawParser,
             "비조치의견서": OpinionParser
         }
+
+        # 세션 재사용을 위한 SSL Adapter 설정 (max_workers 만큼 풀 크기 지정)
+        self.session = get_legacy_session(pool_maxsize=max_workers)
         
     def get_detail_item(self, idx: int, gubun: str) -> Optional[DetailItem]:
         """
@@ -65,7 +69,8 @@ class DetailCrawler:
                 self.failed_items.append((idx, gubun, f"지원하지 않는 문서 유형: {gubun}"))
                 return None
                 
-            fetcher:LawFetcher|OpinionFetcher = fetcher_class(delay_seconds=self.delay_seconds)
+            # 세션을 공유하여 인스턴스 생성
+            fetcher:LawFetcher|OpinionFetcher = fetcher_class(delay_seconds=self.delay_seconds, session=self.session)
             parser:LawParser|OpinionParser = parser_class()
                 
             # HTML 가져오기 : 페쳐 사용

@@ -28,9 +28,9 @@ class LegacySSLAdapter(HTTPAdapter):
             **pool_kwargs
         )
 
-def get_legacy_session():
+def get_legacy_session(pool_maxsize=10):
     """Returns a requests Session with the LegacySSLAdapter mounted."""
     session = requests.Session()
-    adapter = LegacySSLAdapter()
+    adapter = LegacySSLAdapter(pool_maxsize=pool_maxsize)
     session.mount('https://', adapter)
     return session

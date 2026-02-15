@@ -10,8 +10,8 @@ from late.config import LAWREQ_DETAIL_URL, ST_NO, MU_NO, ACT_CD
 class LawFetcher(BaseFetcher):
     """법령해석 상세 페이지 요청 클래스"""
     
-    def __init__(self, delay_seconds: float = 0.5):
-        super().__init__(delay_seconds)
+    def __init__(self, delay_seconds: float = 0.5, session = None):
+        super().__init__(delay_seconds, session)
     
     def _get_url(self) -> str:
         """법령해석 요청 URL 반환"""

@@ -16,7 +16,7 @@ from common.ssl_adapter import get_legacy_session
 class BaseFetcher(ABC):
     """HTML 페이지 요청 기본 클래스"""
     
-    def __init__(self, delay_seconds: float = 0.5):
+    def __init__(self, delay_seconds: float = 0.5, session: Optional[requests.Session] = None):
         """
         Args:
             delay_seconds: 요청 간 지연 시간 (초)
@@ -25,7 +25,10 @@ class BaseFetcher(ABC):
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-        self.session = get_legacy_session()
+        if session:
+            self.session = session
+        else:
+            self.session = get_legacy_session()
     
     def fetch(self, idx: int) -> Optional[str]:
         """
