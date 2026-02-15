@@ -1,17 +1,14 @@
 """
 Exporter
 ------------------------
-DataFrame을 SQLite DB로 변환하고 이를 base64로 인코딩하여 
-JavaScript 파일로 내보내는 클래스
+DataFrame을 Pickle 또는 Excel 파일로 내보내는 클래스
 
 작성자: kinphw
 작성일: 2025-03-31
-버전: 0.0.1
+버전: 0.0.2
 """
 
 import pandas as pd
-import sqlite3
-import base64
 import os
 import logging
 from pathlib import Path
@@ -21,17 +18,19 @@ logger = logging.getLogger(__name__)
 class Exporter:
     """데이터 내보내기 클래스"""
     
-    def __init__(self, df: pd.DataFrame, output_dir: str = "data"):
+    def __init__(self, df: pd.DataFrame, output_dir: str = "data", export_format: str = "pickle"):
         """
         Args:
             df: 변환할 DataFrame
             output_dir: 출력 파일을 저장할 디렉토리
+            export_format: 내보내기 형식 ('pickle' 또는 'excel')
         """
         self.df = df
         self.output_dir = Path(output_dir)
+        self.export_format = export_format.lower()
+        
         self.pickle_file = self.output_dir / "db_i.pkl"
-        self.db_file = self.output_dir / "db_i.db"
-        self.js_file = self.output_dir / "db_i.js"
+        self.excel_file = self.output_dir / "db_i.xlsx"
         
         # 출력 디렉토리 생성
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -39,94 +38,66 @@ class Exporter:
     def export(self) -> None:
         """전체 내보내기 프로세스 실행"""
         try:
-            self._to_pickle() # pickle로 저장 (선택적) # pickle만 추출함
-            #self._to_sqlite()
-            #self._to_javascript()
-            logger.info(f"✅ 내보내기 완료: {self.js_file}")
+            if self.export_format == "excel":
+                self._to_excel()
+            else:
+                self._to_pickle()
+                
+            logger.info(f"✅ 내보내기 완료: {self.export_format}")
         except Exception as e:
             logger.error(f"내보내기 중 오류 발생: {str(e)}")
             raise
 
     def _to_pickle(self) -> None:
-        """DataFrame을 pickle 파일로 저장 (선택적)"""
+        """DataFrame을 pickle 파일로 저장"""
         logger.info(f"Pickle 파일 생성 중: {self.pickle_file}")
         
-        # DataFrame을 pickle 파일로 저장
-        self.df.to_pickle(self.pickle_file)
-        logger.info(f"✓ Pickle 파일 생성 완료: {self.pickle_file}")        
-
-    def _to_sqlite(self) -> None:
-        """DataFrame을 SQLite DB로 변환"""
-        logger.info(f"SQLite DB 생성 중: {self.db_file}")
-        
-        # DB 연결
-        conn = sqlite3.connect(self.db_file)
-        
         try:
-            # 테이블 생성 (기존 테이블 삭제)
-            self.df.to_sql("db_i", conn, if_exists="replace", index=False)
-            conn.commit()
-            logger.info(f"✓ SQLite DB 생성 완료: {len(self.df)}행")
+            self.df.to_pickle(self.pickle_file)
+            logger.info(f"✓ Pickle 파일 생성 완료: {self.pickle_file}")
             
-        finally:
-            conn.close()
-            
-    def _to_javascript(self) -> None:
-        """SQLite DB를 Base64로 인코딩하여 JavaScript 파일로 변환"""
-        logger.info(f"JavaScript 파일 생성 중: {self.js_file}")
-        
-        # DB 파일을 Base64로 인코딩
-        with open(self.db_file, "rb") as f:
-            encoded = base64.b64encode(f.read()).decode("utf-8")
-            
-        # JavaScript 클래스 템플릿
-        js_content = f"""class Dataset {{
-    databaseBase64 = "{encoded}";
-
-    // Base64를 바이너리로 변환하여 Uint8Array 반환
-    getDatabaseBinary() {{
-        const binaryString = atob(this.databaseBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {{
-            bytes[i] = binaryString.charCodeAt(i);
-        }}
-        return bytes;
-    }}
-}};
-
-window.Dataset = Dataset;
-"""
-        
-        # JavaScript 파일로 저장
-        with open(self.js_file, "w", encoding="utf-8") as f:
-            f.write(js_content)
-            
-        logger.info(f"✓ JavaScript 파일 생성 완료")
-        
-    def cleanup(self) -> None:
-        """임시 파일 정리"""
-        try:
-            if self.db_file.exists():
-                self.db_file.unlink()
-                logger.info(f"임시 DB 파일 삭제: {self.db_file}")
+            # Excel 파일이 존재하면 삭제 (cleanup)
+            if self.excel_file.exists():
+                self.excel_file.unlink()
+                logger.info(f"이전 Excel 파일 삭제됨: {self.excel_file}")
+                
         except Exception as e:
-            logger.warning(f"임시 파일 정리 중 오류: {str(e)}")
+            logger.error(f"Pickle 파일 생성 실패: {str(e)}")
+            raise
 
+    def _to_excel(self) -> None:
+        """DataFrame을 Excel 파일로 저장"""
+        logger.info(f"Excel 파일 생성 중: {self.excel_file}")
+        
+        try:
+            # Excel 파일 저장 (index=False로 인덱스 제외)
+            self.df.to_excel(self.excel_file, index=False)
+            logger.info(f"✓ Excel 파일 생성 완료: {self.excel_file}")
+            
+            # Pickle 파일이 존재하면 삭제 (cleanup)
+            if self.pickle_file.exists():
+                self.pickle_file.unlink()
+                logger.info(f"이전 Pickle 파일 삭제됨: {self.pickle_file}")
 
-def export_dataframe(df: pd.DataFrame, output_dir: str = "data") -> None:
+        except Exception as e:
+            logger.error(f"Excel 파일 생성 실패: {str(e)}")
+            # openpyxl dependency check guidance
+            if "No module named 'openpyxl'" in str(e):
+                 logger.error("openpyxl 모듈이 필요합니다. 'pip install openpyxl'을 실행하세요.")
+            raise
+
+def export_dataframe(df: pd.DataFrame, output_dir: str = "data", export_format: str = "pickle") -> None:
     """
-    DataFrame을 JavaScript 파일로 내보내는 편의 함수
+    DataFrame을 지정된 형식으로 내보내는 편의 함수
     
     Args:
         df: 변환할 DataFrame
         output_dir: 출력 파일을 저장할 디렉토리
+        export_format: 내보내기 형식 ('pickle' 또는 'excel')
     """
-    exporter = Exporter(df, output_dir)
-    try:
-        exporter.export()
-    finally:
-        # exporter.cleanup()
-        print("db파일은 정리하지 않습니다. db파일과 js파일 중 선택하여 사용하세요.")
+    exporter = Exporter(df, output_dir, export_format)
+    exporter.export()
+    print(f"{export_format} 형식으로 저장이 완료되었습니다.")
 
 
 if __name__ == "__main__":
@@ -136,8 +107,14 @@ if __name__ == "__main__":
         'name': ['테스트1', '테스트2', '테스트3']
     })
     
+    print("--- Pickle 내보내기 테스트 ---")
     try:
-        export_dataframe(test_df)
-        print("변환 완료!")
+        export_dataframe(test_df, export_format="pickle")
     except Exception as e:
-        print(f"오류 발생: {str(e)}")
+        print(f"Pickle 오류: {e}")
+
+    print("\n--- Excel 내보내기 테스트 ---")
+    try:
+        export_dataframe(test_df, export_format="excel")
+    except Exception as e:
+        print(f"Excel 오류: {e}")

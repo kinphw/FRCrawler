@@ -6,7 +6,7 @@
 import tkinter as tk
 from tkinter import simpledialog
 import sys
-
+from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 import sys
@@ -26,7 +26,7 @@ def run_gui():
     # Tkinter root 생성
     root = tk.Tk()
     root.title("FRCrawler Date Input")
-    root.geometry("300x200")
+    root.geometry("300x300")
 
     # 시작 날짜 라벨 및 입력창
     tk.Label(root, text="시작 날짜 (YYYY-MM-DD):").pack(pady=(20, 5))
@@ -40,13 +40,36 @@ def run_gui():
     end_entry.insert(0, default_end)
     end_entry.pack()
 
+    # 출력 형식 선택 (Radiobutton)
+    tk.Label(root, text="출력 형식:").pack(pady=(10, 5))
+    export_format_var = tk.StringVar(value="pickle")
+    
+    frame_format = tk.Frame(root)
+    frame_format.pack()
+    
+    tk.Radiobutton(frame_format, text="Pickle (.pkl)", variable=export_format_var, value="pickle").pack(side=tk.LEFT, padx=5)
+    tk.Radiobutton(frame_format, text="Excel (.xlsx)", variable=export_format_var, value="excel").pack(side=tk.LEFT, padx=5)
+
+
+    def validate_date(date_text):
+        try:
+            datetime.strptime(date_text, '%Y-%m-%d')
+            return True
+        except ValueError:
+            return False
+
     def on_run():
-        global start_date, end_date, run_clicked
+        global start_date, end_date, run_clicked, selected_format
         start_date = start_entry.get()
         end_date = end_entry.get()
+        selected_format = export_format_var.get()
         
         if not start_date or not end_date:
             messagebox.showwarning("입력 오류", "날짜를 모두 입력해주세요.")
+            return
+
+        if not validate_date(start_date) or not validate_date(end_date):
+            messagebox.showwarning("입력 오류", "날짜 형식이 올바르지 않습니다.\n(YYYY-MM-DD 형식으로 입력해주세요)")
             return
 
         run_clicked = True
@@ -60,6 +83,7 @@ def run_gui():
 print("공통 인수 지정 (GUI 입력)")
 
 # GUI 실행하여 사용자 입력 받기
+selected_format = "pickle" # 기본값
 run_gui()
 
 if not run_clicked:
@@ -67,6 +91,7 @@ if not run_clicked:
     sys.exit()
 
 print(f"입력된 날짜: {start_date} ~ {end_date}")
+print(f"선택된 형식: {selected_format}")
 
 # 공통매개변수 지정 (일자)
 common_params = {
@@ -109,9 +134,9 @@ df_harmonized = Harmonizer = Harmonizer(
 
 print("\n=== Exporting ===")
 
-# js로 자동전환
+# 선택된 형식으로 저장
 from exporter.exporter import export_dataframe
-export_dataframe(df_harmonized, output_dir="data")
+export_dataframe(df_harmonized, output_dir="output", export_format=selected_format)
 
 print("\n=== 완료 ===")
 print("data 폴더에 결과물이 저장되었습니다.")
