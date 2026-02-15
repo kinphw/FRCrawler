@@ -12,6 +12,7 @@ import pandas as pd
 import os
 import logging
 from pathlib import Path
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +36,12 @@ class Exporter:
         # 출력 디렉토리 생성
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
-    def export(self) -> None:
-        """전체 내보내기 프로세스 실행"""
+    def export(self, format_choice: int = 4) -> None:
+        """전체 내보내기 프로세스 실행
+        
+        Args:
+            format_choice: 1=pickle, 2=excel, 3=js, 4=all
+        """
         try:
             if self.export_format == "excel":
                 self._to_excel()

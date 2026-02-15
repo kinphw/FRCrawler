@@ -1,7 +1,9 @@
-# 통합 run
-# v0.0.2 : 250331
+import os
+from dotenv import load_dotenv
 
 #################################
+# .env 파일 로드
+load_dotenv()
 
 import tkinter as tk
 from tkinter import simpledialog
