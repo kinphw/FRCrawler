@@ -19,19 +19,27 @@ logger = logging.getLogger(__name__)
 class Exporter:
     """데이터 내보내기 클래스"""
     
-    def __init__(self, df: pd.DataFrame, output_dir: str = "data", export_format: str = "pickle"):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        output_dir: str = "data",
+        export_format: str = "pickle",
+        output_name: str = "db_i",
+    ):
         """
         Args:
             df: 변환할 DataFrame
             output_dir: 출력 파일을 저장할 디렉토리
             export_format: 내보내기 형식 ('pickle' 또는 'excel')
+            output_name: 출력 파일명(확장자 제외)
         """
         self.df = df
         self.output_dir = Path(output_dir)
         self.export_format = export_format.lower()
+        self.output_name = output_name
         
-        self.pickle_file = self.output_dir / "db_i.pkl"
-        self.excel_file = self.output_dir / "db_i.xlsx"
+        self.pickle_file = self.output_dir / f"{self.output_name}.pkl"
+        self.excel_file = self.output_dir / f"{self.output_name}.xlsx"
         
         # 출력 디렉토리 생성
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -91,7 +99,12 @@ class Exporter:
                  logger.error("openpyxl 모듈이 필요합니다. 'pip install openpyxl'을 실행하세요.")
             raise
 
-def export_dataframe(df: pd.DataFrame, output_dir: str = "data", export_format: str = "pickle") -> None:
+def export_dataframe(
+    df: pd.DataFrame,
+    output_dir: str = "data",
+    export_format: str = "pickle",
+    output_name: str = "db_i",
+) -> None:
     """
     DataFrame을 지정된 형식으로 내보내는 편의 함수
     
@@ -99,8 +112,9 @@ def export_dataframe(df: pd.DataFrame, output_dir: str = "data", export_format: 
         df: 변환할 DataFrame
         output_dir: 출력 파일을 저장할 디렉토리
         export_format: 내보내기 형식 ('pickle' 또는 'excel')
+        output_name: 출력 파일명(확장자 제외)
     """
-    exporter = Exporter(df, output_dir, export_format)
+    exporter = Exporter(df, output_dir, export_format, output_name)
     exporter.export()
     print(f"{export_format} 형식으로 저장이 완료되었습니다.")
 
