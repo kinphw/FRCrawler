@@ -124,15 +124,10 @@ if __name__ == "__main__":
     
     # 명령행에서 실행 시 결과 저장 옵션 처리
     result_df:pd.DataFrame = main(
-        #start_date=args.start_date,
-        start_date = "2025-06-01",        
-        #end_date=args.end_date,
-        end_date = "2025-06-30",
+        start_date=args.start_date,
+        end_date=args.end_date,
         batch_size=args.batch_size,
         max_items=args.max_items,
         max_workers=args.max_workers,
         delay=args.delay        
     )
-        
-    import pandasgui as pg
-    pg.show(result_df)

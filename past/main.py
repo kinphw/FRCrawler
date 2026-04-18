@@ -102,10 +102,8 @@ def main(start_date="2000-01-01", end_date=None, batch_size=1000,
 if __name__ == "__main__":
     args = parse_args()
     result = main(
-        #start_date=args.start_date,
-        start_date = "2025-06-01",
-        #end_date=args.end_date,
-        end_date="2025-06-30",
+        start_date=args.start_date,
+        end_date=args.end_date,
         batch_size=args.batch_size,
         max_items=args.max_items,
         max_workers=args.max_workers,

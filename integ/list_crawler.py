@@ -5,7 +5,7 @@ import requests
 import json
 import logging
 import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import Callable, List, Dict, Any, Optional
 from datetime import datetime
 
 from integ.config import (
@@ -58,7 +58,12 @@ class ListCrawler:
         df = pd.DataFrame(items_dict)
         return df
 
-    def get_list_items(self, start_date: str, end_date: Optional[str] = None) -> List[ListItem]:
+    def get_list_items(
+        self,
+        start_date: str,
+        end_date: Optional[str] = None,
+        progress_callback: Optional[Callable[[str], None]] = None,
+    ) -> List[ListItem]:
         """
         날짜 범위에 해당하는 목록 항목 가져오기
         
@@ -108,6 +113,8 @@ class ListCrawler:
                 if total_count is None:
                     total_count = data.get("recordsTotal", 0)
                     logger.info(f"총 항목 수: {total_count}")
+                    if progress_callback:
+                        progress_callback(f"integ 전체 목록 수 확인: {total_count}건")
                     
                     # 최대 항목 수 제한 적용
                     if self.max_items and self.max_items < total_count:
@@ -134,6 +141,10 @@ class ListCrawler:
                 
                 # 다음 페이지 설정 및 종료 조건 확인
                 start_idx += len(items_data)
+                if progress_callback and total_count is not None:
+                    progress_callback(
+                        f"integ 요청 진행: {min(start_idx, total_count)}/{total_count}건 수집"
+                    )
                 if start_idx >= total_count or (self.max_items and len(collected_items) >= self.max_items):
                     break
                 
@@ -142,10 +153,42 @@ class ListCrawler:
                 
             except Exception as e:
                 logger.error(f"목록 요청 실패: {str(e)}")
+                if progress_callback:
+                    progress_callback(f"integ 요청 실패: {str(e)}")
                 break
                 
         logger.info(f"목록 크롤링 완료: {len(collected_items)}개 항목")
+        if progress_callback:
+            progress_callback(f"integ 목록 조회 완료: 총 {len(collected_items)}건")
         return collected_items
+
+    def get_filtered_count(
+        self,
+        start_date: str,
+        end_date: Optional[str] = None,
+        progress_callback: Optional[Callable[[str], None]] = None,
+    ) -> int:
+        """
+        통합회신사례는 서버 날짜 필터가 안정적으로 동작하지 않아
+        목록 전체를 받은 뒤 replyRegDate로 필터링한 건수를 반환
+        """
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        if progress_callback:
+            progress_callback(f"integ 목록 조회 시작: {start_date} ~ {end_date}")
+
+        items = self.get_list_items(
+            start_date=start_date,
+            end_date=end_date,
+            progress_callback=progress_callback,
+        )
+        filtered_count = sum(
+            1 for item in items
+            if start_date <= item.replyRegDate <= end_date
+        )
+        if progress_callback:
+            progress_callback(f"integ 날짜 필터 적용 완료: {filtered_count}건")
+        return filtered_count
     
 if __name__=="__main__":
     # 로깅 설정

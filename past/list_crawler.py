@@ -6,7 +6,7 @@ import sys
 import requests
 import pandas as pd
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Callable, List, Dict, Any, Optional
 import json
 
 
@@ -35,7 +35,12 @@ class ListCrawler:
         self.headers = DEFAULT_HEADERS.copy()
         self.session = get_legacy_session()
         
-    def get_list_items(self, start_date: str = "2000-01-01", end_date: Optional[str] = None) -> List[ListItem]:
+    def get_list_items(
+        self,
+        start_date: str = "2000-01-01",
+        end_date: Optional[str] = None,
+        progress_callback: Optional[Callable[[str], None]] = None,
+    ) -> List[ListItem]:
         """
         목록 아이템을 크롤링하여 반환
         
@@ -54,6 +59,8 @@ class ListCrawler:
         total_count = None
         
         print(f"목록 크롤링 시작: {start_date} ~ {end_date}")
+        if progress_callback:
+            progress_callback(f"past 목록 조회 시작: {start_date} ~ {end_date}")
         
         while True:
             # 최대 아이템 수 제한 확인
@@ -81,6 +88,8 @@ class ListCrawler:
             if total_count is None:
                 total_count = json_data.get("recordsTotal", 0)
                 print(f"전체 항목 수: {total_count}")
+                if progress_callback:
+                    progress_callback(f"past 전체 목록 수 확인: {total_count}건")
                 
                 # 최대 아이템 수 조정
                 if self.max_items is None or self.max_items > total_count:
@@ -105,6 +114,10 @@ class ListCrawler:
                 
             # 진행 상황 출력
             print(f"목록 진행: {start_pos + len(batch_items)}/{self.max_items} 항목 크롤링 완료")
+            if progress_callback:
+                progress_callback(
+                    f"past 요청 진행: {start_pos + len(batch_items)}/{self.max_items}건 수집"
+                )
             
             # 다음 배치로 이동
             start_pos += current_batch_size
@@ -117,7 +130,31 @@ class ListCrawler:
             random_sleep()
             
         print(f"목록 크롤링 완료: 총 {len(all_items)}개 항목")
+        if progress_callback:
+            progress_callback(f"past 목록 조회 완료: 총 {len(all_items)}건")
         return all_items
+
+    def get_filtered_count(
+        self,
+        start_date: str = "2000-01-01",
+        end_date: Optional[str] = None,
+        progress_callback: Optional[Callable[[str], None]] = None,
+    ) -> int:
+        """
+        과거 회신사례는 서버에서 날짜 필터를 지원하지 않아
+        전체 목록을 가져온 뒤 regDate로 필터링한 건수를 반환
+        """
+        if end_date is None:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+
+        items = self.get_list_items(progress_callback=progress_callback)
+        filtered_count = sum(
+            1 for item in items
+            if start_date <= item.regDate <= end_date
+        )
+        if progress_callback:
+            progress_callback(f"past 날짜 필터 적용 완료: {filtered_count}건")
+        return filtered_count
         
     def get_list_dataframe(self, start_date: str = "2000-01-01", end_date: Optional[str] = None) -> pd.DataFrame:
         """

@@ -5,7 +5,7 @@
 import requests
 import pandas as pd
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Callable, List, Dict, Any, Optional
 import json
 
 from late.models import ListItem
@@ -111,6 +111,36 @@ class ListCrawler:
             
         print(f"목록 크롤링 완료: 총 {len(all_items)}개 항목")
         return all_items
+
+    def get_total_count(
+        self,
+        start_date: str = "2000-01-01",
+        end_date: Optional[str] = None,
+        progress_callback: Optional[Callable[[str], None]] = None,
+    ) -> int:
+        """
+        날짜 조건에 해당하는 전체 목록 건수만 빠르게 반환
+        """
+        if end_date is None:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+        if progress_callback:
+            progress_callback(f"late 건수 확인 요청 시작: {start_date} ~ {end_date}")
+
+        data = {
+            "draw": 1,
+            "start": 0,
+            "length": 1,
+            "searchReplyRegDateStart": start_date,
+            "searchReplyRegDateEnd": end_date
+        }
+
+        response = self.session.post(LIST_URL, headers=self.headers, data=data)
+        response.raise_for_status()
+        json_data = response.json()
+        total_count = int(json_data.get("recordsTotal", 0))
+        if progress_callback:
+            progress_callback(f"late 건수 확인 완료: {total_count}건")
+        return total_count
         
     def get_list_dataframe(self, start_date: str = "2000-01-01", end_date: Optional[str] = None) -> pd.DataFrame:
         """
